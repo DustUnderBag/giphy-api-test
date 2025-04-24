@@ -15,35 +15,27 @@ searchInput.addEventListener("keydown", (e) => {
   if (e.code === "Enter" || e.code === "NumpadEnter") fetchImage();
 });
 
-function fetchImage() {
+async function fetchImage() {
   img.src = loadingScreen;
 
   if (!searchInput.value) searchInput.value = "cats";
   const keyword = searchInput.value;
 
   const url = `https://api.giphy.com/v1/gifs/translate?api_key=OGy2jnjHhqgtYzZ3aEIL8X43Q7w9SEoJ&s=${keyword}`;
-  const request = new Request(url, { mode: "cors" });
-  const response = fetch(request);
+  try {
+    const request = new Request(url, { mode: "cors" });
+    const response = await fetch(request);
+    console.log(response);
+    if (!response.ok) throw identifyError(response);
+    const resultData = await response.json();
 
-  response
-    .then(function (response) {
-      console.log(response);
+    //Indicate error when no result is found.
+    if (!resultData.data.length) img.src = notFoundScreen;
 
-      if (!response.ok) {
-        throw identifyError(response);
-      }
-
-      return response.json();
-    })
-    .then(function (response) {
-      //Indicate error when no result is found.
-      if (!response.data.length) img.src = notFoundScreen;
-
-      img.src = response.data.images.original.url;
-    })
-    .catch((e) => {
-      console.log(e);
-    });
+    img.src = resultData.data.images.original.url;
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 function identifyError(response) {
