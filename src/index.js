@@ -8,44 +8,49 @@ const img = document.querySelector("img#gif");
 const btn = document.querySelector("button#fetch");
 const searchInput = document.querySelector("input#keyword");
 
-fetchImage();
+updateImage();
 
-btn.addEventListener("click", fetchImage);
+btn.addEventListener("click", updateImage);
 searchInput.addEventListener("keydown", (e) => {
-  if (e.code === "Enter" || e.code === "NumpadEnter") fetchImage();
+  if (e.code === "Enter" || e.code === "NumpadEnter") updateImage();
 });
 
-function fetchImage() {
+async function fetchUrl() {
   img.src = loadingScreen;
 
   if (!searchInput.value) searchInput.value = "cats";
   const keyword = searchInput.value;
 
   const url = `https://api.giphy.com/v1/gifs/translate?api_key=OGy2jnjHhqgtYzZ3aEIL8X43Q7w9SEoJ&s=${keyword}`;
-  const request = new Request(url, { mode: "cors" });
-  const response = fetch(request);
+  try {
+    const request = new Request(url, { mode: "cors" });
+    const response = await fetch(request);
+    console.log(response);
 
-  response
-    .then(function (response) {
-      console.log(response);
+    if (!response.ok) throw identifyError(response);
+    const resultData = await response.json();
 
-      if (!response.ok) {
-        throw identifyError(response);
-      }
+    //If no result is found with some keywords, a response with empty data will be fetched.
+    //But the response status is still 200 and treated as ok, no error will be thrown.
+    //Therefore, need to handle such error explicitly.
+    if (resultData.data.length === 0) {
+      console.log(resultData);
+      console.log("No image found.");
+      return notFoundScreen;
+    }
 
-      return response.json();
-    })
-    .then(function (response) {
-      //Indicate error when no result is found.
-      if (!response.data.length) img.src = notFoundScreen;
-
-      img.src = response.data.images.original.url;
-    })
-    .catch((e) => {
-      console.log(e);
-    });
+    return resultData.data.images.original.url;
+  } catch (error) {
+    console.log(error);
+    return notFoundScreen;
+  }
 }
 
+function updateImage() {
+  fetchUrl().then((url) => (img.src = url));
+}
+
+//To identify error code, then return an Error instance with comprehensive description of error.
 function identifyError(response) {
   let msg = response.status + " ";
   if (response.status === 400) msg += "Bad Request: Incorrect request format";
